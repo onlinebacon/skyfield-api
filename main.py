@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from flask import Flask, jsonify
-from skyfield.api import Star, load
+from skyfield.api import Star, load, Loader
 from skyfield.data import hipparcos
 from skyfield.magnitudelib import planetary_magnitude
 
@@ -20,6 +20,22 @@ def df_star_to_mag(df_star):
 	mag_text = cols[1].strip()
 	mag = float(mag_text)
 	return mag
+
+def unix_to_aries_gha(unix):
+	dt = datetime.fromtimestamp(unix).astimezone(timezone.utc)
+	ts = Loader(".").timescale(builtin=True)
+	sec = dt.second + dt.microsecond / 1e6
+	tm = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, sec)
+	return 15 * tm.gast
+
+@app.route('/time/<unix_str>/aries-gha')
+def get_aries_gha(unix_str):
+	try:
+		unix = float(unix_str)
+		return jsonify(unix_to_aries_gha(unix))
+	except Exception as error:
+		print(error)
+		return 'Internal error', 500
 
 @app.route('/time/<unix_str>/hip/<int:hip>')
 def get_star_at(unix_str, hip):
